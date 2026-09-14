@@ -82,6 +82,7 @@
             <button class="tab-btn" onclick="switchAITab('tab-blind-screening')">🕶️ Blind Screening</button>
             <button class="tab-btn" onclick="switchAITab('tab-slot-lease')">🔒 Slot Lease Lock</button>
             <button class="tab-btn" onclick="switchAITab('tab-kuhn-munkres')">⚡ Kuhn-Munkres Matcher (V4.0)</button>
+            <button class="tab-btn" onclick="switchAITab('tab-clash-arbitrator')">⚡ Multi-Company Clash Radar & Peer Swap</button>
         </div>
 
 
@@ -308,6 +309,82 @@
                     <button class="btn btn-outline" onclick="simulateDelayRipple()"><span>⏱️ Simulate 20-Min Delay & Auto-Heal Cascade</span></button>
                 </div>
                 <div id="kuhn-munkres-result" class="result-box" style="display:none; margin-top: 14px;"></div>
+            </div>
+
+            <!-- TAB 14: MULTI-COMPANY CLASH RADAR & PEER SLOT SWAP EXCHANGE -->
+            <div id="tab-clash-arbitrator" class="ai-tab-content">
+                <div class="card-header">
+                    <h2>⚡ UNCLASH V4.2: Multi-Company Clash Radar & Real-Time Peer Slot Swap Exchange</h2>
+                    <span class="feature-status active">Zero Recruiter Disruption</span>
+                </div>
+                <p class="card-description">
+                    Autonomous cross-drive arbitration protocol reconciling concurrent interviews across Tier-1 recruiters (Google, Microsoft, Amazon, Goldman Sachs, Uber). Eliminates hard temporal clashes and transit fatigue violations via Pareto-optimal 2-way bilateral and 3-way triangular circular permutation swaps, coupled with instant $O(1)$ offer cascade slot reclaim.
+                </p>
+
+                <!-- Dynamic Metric Summary Strip -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0;">
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 12px; text-align: center;">
+                        <div style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Hard Overlaps</div>
+                        <div id="stat-hard-clashes" style="color: #f87171; font-size: 1.4rem; font-weight: 800;">1 Active</div>
+                        <div style="color: #cbd5e1; font-size: 0.7rem; margin-top: 2px;">Physically Impossible</div>
+                    </div>
+                    <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px; padding: 12px; text-align: center;">
+                        <div style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Buffer Violations</div>
+                        <div id="stat-buffer-clashes" style="color: #fbbf24; font-size: 1.4rem; font-weight: 800;">1 Active</div>
+                        <div style="color: #cbd5e1; font-size: 0.7rem; margin-top: 2px;">&lt;15m Transit Gap</div>
+                    </div>
+                    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 12px; text-align: center;">
+                        <div style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">KKT Duality Gap</div>
+                        <div id="stat-duality-gap" style="color: #34d399; font-size: 1.4rem; font-weight: 800;">0.000</div>
+                        <div style="color: #cbd5e1; font-size: 0.7rem; margin-top: 2px;">Pareto Stationary</div>
+                    </div>
+                    <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 10px; padding: 12px; text-align: center;">
+                        <div style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Pareto Welfare</div>
+                        <div id="stat-welfare-gain" style="color: #818cf8; font-size: 1.4rem; font-weight: 800;">+42.5%</div>
+                        <div style="color: #cbd5e1; font-size: 0.7rem; margin-top: 2px;">Recruiter Disruption: 0m</div>
+                    </div>
+                </div>
+
+                <!-- Interactive Multi-Company Clash Topology Radar -->
+                <div class="clash-radar-container" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h4 style="color: #e2e8f0; margin: 0; font-size: 0.95rem;">⚡ Real-Time Cross-Drive Concurrent Interview Schedule</h4>
+                        <span id="matrix-hash-badge" style="font-family: monospace; font-size: 0.75rem; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 3px 8px; border-radius: 6px;">0xMATRIX-SCAN-READY</span>
+                    </div>
+
+                    <div id="active-clash-cards" style="display: flex; flex-direction: column; gap: 10px;">
+                        <!-- Injected dynamically by JavaScript -->
+                        <div style="padding: 12px; border-radius: 8px; background: rgba(239, 68, 68, 0.08); border-left: 4px solid #ef4444;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <strong style="color: #fca5a5;">🔴 CRITICAL HARD OVERLAP · Aarav Sharma (CAND-101 · CGPA 9.4)</strong>
+                                <span style="font-size: 0.75rem; color: #f87171; background: rgba(239, 68, 68, 0.2); padding: 2px 6px; border-radius: 4px;">30m Direct Overlap</span>
+                            </div>
+                            <div style="font-size: 0.8rem; color: #cbd5e1; margin-top: 4px;">
+                                🏢 <strong>Google</strong> (Boardroom Alpha): 10:00 - 10:45 &nbsp;✖&nbsp; 🏢 <strong>Microsoft</strong> (Lab 402): 10:15 - 11:00
+                            </div>
+                        </div>
+
+                        <div style="padding: 12px; border-radius: 8px; background: rgba(245, 158, 11, 0.08); border-left: 4px solid #f59e0b;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <strong style="color: #fcd34d;">⚠️ TRANSIT BUFFER VIOLATION · Vikram Patel (CAND-103 · CGPA 8.8)</strong>
+                                <span style="font-size: 0.75rem; color: #fbbf24; background: rgba(245, 158, 11, 0.2); padding: 2px 6px; border-radius: 4px;">0m Transit Gap</span>
+                            </div>
+                            <div style="font-size: 0.8rem; color: #cbd5e1; margin-top: 4px;">
+                                🏢 <strong>Goldman Sachs</strong> (Conference Hall): ends 10:45 &nbsp;➔&nbsp; 🏢 <strong>Amazon</strong> (Media Center): starts 10:45 (Diff Campus Wings)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="action-bar" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-outline" onclick="scanCrossCompanyConflicts()"><span>🔍 Scan Cross-Drive Conflict Matrix</span></button>
+                    <button class="btn btn-primary" onclick="resolveParetoSwaps()"><span>⚡ Auto-Resolve via Pareto Triangular Swaps</span></button>
+                    <button class="btn btn-danger" onclick="reclaimOfferCascade()"><span>🎓 Candidate Accepts Offer & Reclaim Cascade</span></button>
+                </div>
+
+                <!-- Output Box -->
+                <div id="clash-arbitrator-result" class="result-box" style="display:none; margin-top: 14px;"></div>
             </div>
 
         </section>

@@ -14,6 +14,7 @@ const { createAdapter } = require('@socket.io/redis-adapter');
 const db = require('./database');
 const scheduler = require('./schedulerEngine');
 const kuhnMunkresMatcher = require('./kuhnMunkresMatcher');
+const multiCompanyClashArbitrator = require('./multiCompanyClashArbitrator');
 
 const app = express();
 app.use(cors());
@@ -758,6 +759,47 @@ app.post('/api/v4/unclash/simulate-delay', (req, res) => {
             success: true,
             ...result
         });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+/**
+ * GET /api/v4/unclash/conflict-matrix
+ * Returns cross-drive multi-company conflict matrix (hard overlaps & buffer violations)
+ */
+app.get('/api/v4/unclash/conflict-matrix', (req, res) => {
+    try {
+        const matrix = multiCompanyClashArbitrator.generateConflictMatrix();
+        res.json(matrix);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+/**
+ * POST /api/v4/unclash/resolve-swaps
+ * Solves 2-way and 3-way circular permutation peer slot swaps with KKT proof
+ */
+app.post('/api/v4/unclash/resolve-swaps', (req, res) => {
+    try {
+        const schedule = req.body?.schedule;
+        const result = multiCompanyClashArbitrator.solveParetoPeerSwaps(schedule);
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+/**
+ * POST /api/v4/unclash/offer-cascade-reclaim
+ * O(1) slot reclaim and waitlist promotion upon candidate offer acceptance
+ */
+app.post('/api/v4/unclash/offer-cascade-reclaim', (req, res) => {
+    try {
+        const { candidateId = 'CAND-101', acceptedCompany = 'Google' } = req.body || {};
+        const result = multiCompanyClashArbitrator.executeOfferCascadeRelease(candidateId, acceptedCompany);
+        res.json(result);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
