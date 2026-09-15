@@ -4,6 +4,7 @@
   "description": "Algorithmic Recruitment Logistics and Scheduling Optimizer",
   "main": "backend/server.js",
   "scripts": {
+    "build": "node -e \"const fs=require('fs'); if(!fs.existsSync('dist')) fs.mkdirSync('dist'); fs.cpSync('frontend', 'dist', {recursive: true});\"",
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
     "test": "jest --forceExit --runInBand"
