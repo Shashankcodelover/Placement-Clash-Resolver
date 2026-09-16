@@ -83,6 +83,8 @@
             <button class="tab-btn" onclick="switchAITab('tab-slot-lease')">🔒 Slot Lease Lock</button>
             <button class="tab-btn" onclick="switchAITab('tab-kuhn-munkres')">⚡ Kuhn-Munkres Matcher (V4.0)</button>
             <button class="tab-btn" onclick="switchAITab('tab-clash-arbitrator')">⚡ Multi-Company Clash Radar & Peer Swap</button>
+            <button class="tab-btn" onclick="switchAITab('tab-recruitment-mesh')">🌐 Recruitment Topology Mesh</button>
+            <button class="tab-btn" onclick="switchAITab('tab-bulk-ingestion')">📥 Enterprise Ingestion Studio</button>
         </div>
 
 
@@ -385,6 +387,140 @@
 
                 <!-- Output Box -->
                 <div id="clash-arbitrator-result" class="result-box" style="display:none; margin-top: 14px;"></div>
+            </div>
+
+            <!-- TAB 12: RECRUITMENT TOPOLOGY MESH -->
+            <div id="tab-recruitment-mesh" class="ai-tab-content">
+                <div class="card-header">
+                    <h2>🌐 Real-Time Recruitment Topology & Allocation Mesh</h2>
+                    <span class="feature-status active">Topology Active</span>
+                </div>
+                <p class="card-description">Decentralized multi-company hiring mesh connecting Corporate Recruiters, Interview Panels, Domain Tracks, and Physical/Virtual Venues with real-time capacity and routing balance.</p>
+
+                <!-- Mesh Metric Stats -->
+                <div class="mesh-metric-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                    <div class="kpi-card" style="padding: 12px;">
+                        <span class="kpi-icon">🏢</span>
+                        <div>
+                            <h3 id="mesh-stat-corridors">4 Active</h3>
+                            <p>Mesh Corridors</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card" style="padding: 12px;">
+                        <span class="kpi-icon">🧭</span>
+                        <div>
+                            <h3 id="mesh-stat-tracks">4 Tracks</h3>
+                            <p>Domain Tracks</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card" style="padding: 12px;">
+                        <span class="kpi-icon">🏛️</span>
+                        <div>
+                            <h3 id="mesh-stat-rooms">4 Venues</h3>
+                            <p>Allocated Rooms</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card" style="padding: 12px;">
+                        <span class="kpi-icon">⚡</span>
+                        <div>
+                            <h3 id="mesh-stat-load">8 Total Slots</h3>
+                            <p>Concurrent Capacity</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Bar & Assign Corridor Trigger -->
+                <div class="action-bar" style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="toggleAssignCorridorModal()"><span>➕ Assign Corporate Track Node</span></button>
+                    <button class="btn btn-outline" onclick="fetchPlacementMesh()"><span>🔄 Refresh Topology Mesh</span></button>
+                    <button class="btn btn-accent" onclick="askAgentQuestion('Analyze Placement Mesh capacity bottlenecks across Google and Microsoft')"><span>🤖 AI Mesh Analysis</span></button>
+                </div>
+
+                <!-- Assignment Form Modal / Inline Box -->
+                <div id="assign-corridor-box" class="result-box" style="display: none; margin-bottom: 16px; border: 1px solid rgba(99, 102, 241, 0.4); background: rgba(15, 23, 42, 0.7);">
+                    <h4 style="color: #818cf8; margin-top: 0;">➕ Provision Placement Mesh Corridor</h4>
+                    <div class="flex-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 12px;">
+                        <div class="input-group">
+                            <label>Hiring Enterprise</label>
+                            <input type="text" id="mesh-input-company" class="custom-input" placeholder="e.g. Uber India" value="Amazon">
+                        </div>
+                        <div class="input-group">
+                            <label>Panel ID</label>
+                            <select id="mesh-input-panel" class="custom-input">
+                                <option value="PanelA">PanelA (Technical Round 1)</option>
+                                <option value="PanelB">PanelB (Systems Architecture)</option>
+                                <option value="PanelC">PanelC (Full Stack & AI)</option>
+                                <option value="PanelD">PanelD (Quant & Low-Latency)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Domain Track</label>
+                            <input type="text" id="mesh-input-track" class="custom-input" placeholder="e.g. Distributed Systems" value="Cloud Infrastructure & Go">
+                        </div>
+                        <div class="input-group">
+                            <label>Venue / Virtual Room</label>
+                            <input type="text" id="mesh-input-room" class="custom-input" placeholder="e.g. Boardroom Gamma" value="Lab 301 (Network Wing)">
+                        </div>
+                        <div class="input-group">
+                            <label>Parallel Capacity</label>
+                            <input type="number" id="mesh-input-cap" class="custom-input" value="2" min="1" max="10">
+                        </div>
+                        <div class="input-group">
+                            <label>Lead Interviewer</label>
+                            <input type="text" id="mesh-input-lead" class="custom-input" placeholder="e.g. Priya S." value="Priya Sharma (Sr. Staff Eng)">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="submitAssignCorridor()"><span>✅ Deploy Corridor to Mesh</span></button>
+                        <button class="btn btn-outline" onclick="toggleAssignCorridorModal()">Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Mesh Cards Container -->
+                <div id="placement-mesh-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px;">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+
+            <!-- TAB 13: ENTERPRISE BULK INGESTION STUDIO -->
+            <div id="tab-bulk-ingestion" class="ai-tab-content">
+                <div class="card-header">
+                    <h2>📥 Enterprise Bulk Ingestion Studio (CSV & JSON Batch Processing)</h2>
+                    <span class="feature-status active">Batch IO Ready</span>
+                </div>
+                <p class="card-description">High-throughput ingestion engine for University Student Rosters, Interview Panels, Exam Blocks, and Placement Relations with atomic validation and instant state broadcasting.</p>
+
+                <!-- Entity Switcher -->
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+                    <button class="btn btn-outline active-entity-btn" id="btn-ingest-students" onclick="selectIngestEntity('students')">🎓 Students Roster</button>
+                    <button class="btn btn-outline" id="btn-ingest-panels" onclick="selectIngestEntity('panels')">🧑‍💻 Interview Panels</button>
+                    <button class="btn btn-outline" id="btn-ingest-interviews" onclick="selectIngestEntity('interviews')">⚡ Interview Slots</button>
+                    <button class="btn btn-outline" id="btn-ingest-academic" onclick="selectIngestEntity('academic')">📚 Academic Exams</button>
+                    <button class="btn btn-outline" id="btn-ingest-relations" onclick="selectIngestEntity('relations')">🌐 Placement Mesh</button>
+                </div>
+
+                <!-- Template Ingestion Controls -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-sm btn-outline" onclick="loadIngestTemplate('csv')">📄 Load CSV Template</button>
+                        <button class="btn btn-sm btn-outline" onclick="loadIngestTemplate('json')">📦 Load JSON Schema</button>
+                        <button class="btn btn-sm btn-danger-outline" onclick="clearIngestBuffer()">🗑️ Clear</button>
+                    </div>
+                    <span id="ingest-detected-rows" style="font-family: monospace; font-size: 0.78rem; color: #a5b4fc; background: rgba(99,102,241,0.15); padding: 3px 8px; border-radius: 4px;">Payload: 0 Records Detected</span>
+                </div>
+
+                <!-- Live Monospace Ingestion Editor -->
+                <div class="input-group" style="margin-bottom: 12px;">
+                    <textarea id="bulk-ingest-buffer" class="custom-textarea" rows="8" style="font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; line-height: 1.4; background: #080d1a; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);" oninput="detectIngestBufferRows()"></textarea>
+                </div>
+
+                <div class="action-bar" style="display: flex; gap: 10px;">
+                    <button class="btn btn-primary" id="btn-execute-bulk-ingest" onclick="executeBulkIngest()"><span>⚡ Execute Atomic Bulk Ingestion</span></button>
+                    <button class="btn btn-outline" onclick="resetSystemState()">🔄 Reset to University Baseline</button>
+                </div>
+
+                <!-- Ingestion Result Box -->
+                <div id="bulk-ingest-result" class="result-box" style="display: none; margin-top: 14px;"></div>
             </div>
 
         </section>

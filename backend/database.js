@@ -141,6 +141,22 @@ class PlacementDatabase {
                 );
             `);
 
+            // 9. Placement Relations & Allocation Mesh
+            this.db.run(`
+                CREATE TABLE IF NOT EXISTS placement_relations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tenant_id TEXT NOT NULL,
+                    company TEXT NOT NULL,
+                    panel_id TEXT NOT NULL,
+                    track_name TEXT NOT NULL,
+                    venue_room TEXT NOT NULL,
+                    capacity INTEGER DEFAULT 1,
+                    interviewer_lead TEXT NOT NULL,
+                    status TEXT DEFAULT 'ACTIVE',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+            `);
+
             this.seedData();
         });
     }
@@ -216,6 +232,14 @@ class PlacementDatabase {
                 insertQueue.run(defaultTenant, 'Meta', 'STU_002', 80, 0, 80, 'WAITING');
                 insertQueue.finalize();
 
+                // Placement Relations & Allocation Mesh
+                const insertRel = this.db.prepare('INSERT INTO placement_relations (tenant_id, company, panel_id, track_name, venue_room, capacity, interviewer_lead, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?);');
+                insertRel.run(defaultTenant, 'Google', 'PanelA', 'Distributed Systems & Cloud Core', 'Boardroom Alpha (Wing A)', 2, 'Sundar R. (Staff Engineer)', 'ACTIVE');
+                insertRel.run(defaultTenant, 'Microsoft', 'PanelB', 'Systems Architecture & Windows Kernel', 'Lab 402 (Engineering Wing)', 2, 'Satya N. (Principal Lead)', 'ACTIVE');
+                insertRel.run(defaultTenant, 'Meta', 'PanelC', 'Fullstack Architecture & AI Infrastructure', 'Virtual Suite 1 (WebRTC)', 3, 'Mark Z. (Engineering Director)', 'ACTIVE');
+                insertRel.run(defaultTenant, 'Goldman Sachs', 'PanelD', 'Low-Latency C++ & Quant Analytics', 'Conference Hall (Finance Wing)', 1, 'David S. (VP Tech)', 'ACTIVE');
+                insertRel.finalize();
+
                 this.db.run('COMMIT;', (commitErr) => {
                     if (!commitErr) console.log('[DB] Seeding completed atomically.');
                 });
@@ -272,6 +296,7 @@ class PlacementDatabase {
         const scorecards = await this.all('SELECT * FROM scorecards WHERE tenant_id = ? ORDER BY id DESC LIMIT 50;', [tenantId]);
         const notifications = await this.all('SELECT * FROM notifications WHERE tenant_id = ? ORDER BY id DESC LIMIT 50;', [tenantId]);
         const auditLogs = await this.all('SELECT * FROM audit_logs WHERE tenant_id = ? ORDER BY id DESC LIMIT 50;', [tenantId]);
+        const placementRelations = await this.all('SELECT * FROM placement_relations WHERE tenant_id = ? ORDER BY id;', [tenantId]);
 
         // Build academic timetable lookup
         const academicTimetable = {};
@@ -320,6 +345,7 @@ class PlacementDatabase {
             interviews,
             waitQueue,
             corporateQueues,
+            placementRelations,
             triggerLogs: scorecards.map(sc => ({
                 studentId: sc.student_id,
                 studentName: sc.student_id,
@@ -337,6 +363,211 @@ class PlacementDatabase {
             })),
             auditLogs
         };
+    }
+
+    // --- Universal Deletion Methods ---
+    async deleteStudent(tenantId, studentId) {
+        await this.run('BEGIN TRANSACTION;');
+        try {
+            await this.run('DELETE FROM corporate_queues WHERE tenant_id = ? AND student_id = ?;', [tenantId, studentId]);
+            await this.run('DELETE FROM academic_schedules WHERE tenant_id = ? AND student_id = ?;', [tenantId, studentId]);
+            await this.run('DELETE FROM interviews WHERE tenant_id = ? AND student_id = ?;', [tenantId, studentId]);
+            await this.run('DELETE FROM scorecards WHERE tenant_id = ? AND student_id = ?;', [tenantId, studentId]);
+            await this.run('DELETE FROM notifications WHERE tenant_id = ? AND student_id = ?;', [tenantId, studentId]);
+            const res = await this.run('DELETE FROM students WHERE tenant_id = ? AND id = ?;', [tenantId, studentId]);
+            await this.run(`INSERT INTO audit_logs (tenant_id, actor, action, details, timestamp) VALUES (?, ?, ?, ?, ?);`,
+                [tenantId, 'ADMIN', 'DELETE_STUDENT', `Cascading purge of candidate ${studentId}`, new Date().toISOString()]);
+            await this.run('COMMIT;');
+            return res;
+        } catch (e) {
+            await this.run('ROLLBACK;');
+            throw e;
+        }
+    }
+
+    async deletePanel(tenantId, panelId) {
+        await this.run('BEGIN TRANSACTION;');
+        try {
+            await this.run('DELETE FROM interviews WHERE tenant_id = ? AND panel_id = ?;', [tenantId, panelId]);
+            await this.run('DELETE FROM placement_relations WHERE tenant_id = ? AND panel_id = ?;', [tenantId, panelId]);
+            const res = await this.run('DELETE FROM panels WHERE tenant_id = ? AND id = ?;', [tenantId, panelId]);
+            await this.run(`INSERT INTO audit_logs (tenant_id, actor, action, details, timestamp) VALUES (?, ?, ?, ?, ?);`,
+                [tenantId, 'ADMIN', 'DELETE_PANEL', `Dissolved panel ${panelId}`, new Date().toISOString()]);
+            await this.run('COMMIT;');
+            return res;
+        } catch (e) {
+            await this.run('ROLLBACK;');
+            throw e;
+        }
+    }
+
+    async deleteInterview(tenantId, interviewId) {
+        return await this.run('DELETE FROM interviews WHERE tenant_id = ? AND id = ?;', [tenantId, interviewId]);
+    }
+
+    async deleteQueue(tenantId, queueId) {
+        return await this.run('DELETE FROM corporate_queues WHERE tenant_id = ? AND id = ?;', [tenantId, queueId]);
+    }
+
+    async deleteAcademicSchedule(tenantId, scheduleId) {
+        return await this.run('DELETE FROM academic_schedules WHERE tenant_id = ? AND id = ?;', [tenantId, scheduleId]);
+    }
+
+    async deletePlacementRelation(tenantId, relationId) {
+        return await this.run('DELETE FROM placement_relations WHERE tenant_id = ? AND id = ?;', [tenantId, relationId]);
+    }
+
+    // --- Placement Relations & Allocation Mesh Methods ---
+    async getPlacementRelations(tenantId) {
+        return await this.all('SELECT * FROM placement_relations WHERE tenant_id = ? ORDER BY id;', [tenantId]);
+    }
+
+    async insertPlacementRelation(tenantId, data) {
+        const { company, panelId, trackName, venueRoom, capacity = 1, interviewerLead, status = 'ACTIVE' } = data;
+        const res = await this.run(
+            `INSERT INTO placement_relations (tenant_id, company, panel_id, track_name, venue_room, capacity, interviewer_lead, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+            [tenantId, company, panelId, trackName, venueRoom, capacity, interviewerLead, status]
+        );
+        return { id: res.lastID, ...data };
+    }
+
+    // --- Enterprise Bulk Ingestion Methods ---
+    async bulkUpsertStudents(tenantId, students) {
+        let inserted = 0;
+        await this.run('BEGIN TRANSACTION;');
+        try {
+            for (const s of students) {
+                const id = s.id || s.usn || `STU_${Math.floor(100 + Math.random() * 900)}`;
+                const name = s.name || 'Unnamed Candidate';
+                const email = s.email || `${id.toLowerCase()}@uni.edu`;
+                const cgpa = parseFloat(s.cgpa) || 8.0;
+                const department = s.department || s.dept || 'Computer Science';
+                const status = s.status || 'ACTIVE';
+
+                await this.run(
+                    `INSERT OR REPLACE INTO students (id, tenant_id, name, email, cgpa, department, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?);`,
+                    [id, tenantId, name, email, cgpa, department, status]
+                );
+                inserted++;
+            }
+            await this.run('COMMIT;');
+            return { count: inserted };
+        } catch (e) {
+            await this.run('ROLLBACK;');
+            throw e;
+        }
+    }
+
+    async bulkInsertPanels(tenantId, panels) {
+        let inserted = 0;
+        await this.run('BEGIN TRANSACTION;');
+        try {
+            for (const p of panels) {
+                const id = p.id || `Panel_${Math.floor(100 + Math.random() * 900)}`;
+                const name = p.name || `${p.company || 'Enterprise'} Panel`;
+                const company = p.company || 'Enterprise Corp';
+                const interviewerName = p.interviewer_name || p.interviewerName || 'Lead Engineer';
+                const virtualRoomUrl = p.virtual_room_url || p.virtualRoomUrl || 'https://meet.google.com/uni-place';
+                const status = p.status || 'IDLE';
+
+                await this.run(
+                    `INSERT OR REPLACE INTO panels (id, tenant_id, name, company, interviewer_name, virtual_room_url, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?);`,
+                    [id, tenantId, name, company, interviewerName, virtualRoomUrl, status]
+                );
+                inserted++;
+            }
+            await this.run('COMMIT;');
+            return { count: inserted };
+        } catch (e) {
+            await this.run('ROLLBACK;');
+            throw e;
+        }
+    }
+
+    async bulkInsertInterviews(tenantId, interviews) {
+        let inserted = 0;
+        await this.run('BEGIN TRANSACTION;');
+        try {
+            for (const i of interviews) {
+                const panelId = i.panel_id || i.panelId || 'PanelA';
+                const studentId = i.student_id || i.studentId || 'STU_001';
+                const roundName = i.round_name || i.roundName || 'Technical Round';
+                const schedStart = i.scheduled_start || i.scheduledStart || this.getISOOffsetMins(600);
+                const schedEnd = i.scheduled_end || i.scheduledEnd || this.getISOOffsetMins(645);
+                const estStart = i.estimated_start || i.estimatedStart || schedStart;
+                const estEnd = i.estimated_end || i.estimatedEnd || schedEnd;
+                const status = i.status || 'Pending';
+                const delayMins = parseInt(i.delay_mins || i.delayMins || 0);
+
+                await this.run(
+                    `INSERT INTO interviews (tenant_id, panel_id, student_id, round_name, scheduled_start, scheduled_end, estimated_start, estimated_end, status, delay_mins)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+                    [tenantId, panelId, studentId, roundName, schedStart, schedEnd, estStart, estEnd, status, delayMins]
+                );
+                inserted++;
+            }
+            await this.run('COMMIT;');
+            return { count: inserted };
+        } catch (e) {
+            await this.run('ROLLBACK;');
+            throw e;
+        }
+    }
+
+    async bulkInsertAcademicSchedules(tenantId, schedules) {
+        let inserted = 0;
+        await this.run('BEGIN TRANSACTION;');
+        try {
+            for (const s of schedules) {
+                const studentId = s.student_id || s.studentId || 'STU_001';
+                const eventName = s.event_name || s.eventName || 'Midterm Exam';
+                const startTime = s.start_time || s.startTime || this.getISOOffsetMins(900);
+                const endTime = s.end_time || s.endTime || this.getISOOffsetMins(1100);
+
+                await this.run(
+                    `INSERT INTO academic_schedules (tenant_id, student_id, event_name, start_time, end_time)
+                     VALUES (?, ?, ?, ?, ?);`,
+                    [tenantId, studentId, eventName, startTime, endTime]
+                );
+                inserted++;
+            }
+            await this.run('COMMIT;');
+            return { count: inserted };
+        } catch (e) {
+            await this.run('ROLLBACK;');
+            throw e;
+        }
+    }
+
+    async bulkInsertPlacementRelations(tenantId, relations) {
+        let inserted = 0;
+        await this.run('BEGIN TRANSACTION;');
+        try {
+            for (const r of relations) {
+                const company = r.company || 'Google';
+                const panelId = r.panel_id || r.panelId || 'PanelA';
+                const trackName = r.track_name || r.trackName || 'General Engineering Track';
+                const venueRoom = r.venue_room || r.venueRoom || 'Virtual Suite';
+                const capacity = parseInt(r.capacity) || 1;
+                const interviewerLead = r.interviewer_lead || r.interviewerLead || 'Lead Interviewer';
+                const status = r.status || 'ACTIVE';
+
+                await this.run(
+                    `INSERT INTO placement_relations (tenant_id, company, panel_id, track_name, venue_room, capacity, interviewer_lead, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+                    [tenantId, company, panelId, trackName, venueRoom, capacity, interviewerLead, status]
+                );
+                inserted++;
+            }
+            await this.run('COMMIT;');
+            return { count: inserted };
+        } catch (e) {
+            await this.run('ROLLBACK;');
+            throw e;
+        }
     }
 }
 

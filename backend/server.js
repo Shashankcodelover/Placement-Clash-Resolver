@@ -815,11 +815,217 @@ app.post('/api/reset', authMiddleware(['ADMIN']), async (req, res) => {
         await db.run('DELETE FROM panels WHERE tenant_id = ?;', [tenantId]);
         await db.run('DELETE FROM academic_schedules WHERE tenant_id = ?;', [tenantId]);
         await db.run('DELETE FROM students WHERE tenant_id = ?;', [tenantId]);
+        await db.run('DELETE FROM placement_relations WHERE tenant_id = ?;', [tenantId]);
         db.seedData();
 
         await broadcastSystemState(tenantId);
         const state = await db.getSystemSnapshot(tenantId);
         res.json({ message: "Placement database successfully reset.", state });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ═════════════════════════════════════════════════════════════════
+// HELPER: PARSE UPLOAD PAYLOAD (CSV OR JSON)
+// ═════════════════════════════════════════════════════════════════
+
+function parseUploadPayload(body) {
+    if (Array.isArray(body)) return body;
+    if (body.data && Array.isArray(body.data)) return body.data;
+    if (typeof body === 'string' || (body && typeof body.csv === 'string')) {
+        const raw = typeof body === 'string' ? body : body.csv;
+        const lines = raw.trim().split(/\r?\n/).filter(l => l.trim().length > 0);
+        if (lines.length < 2) return [];
+        const headers = lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, ''));
+        const rows = [];
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
+            const row = {};
+            headers.forEach((h, idx) => {
+                row[h] = values[idx] !== undefined ? values[idx] : '';
+            });
+            rows.push(row);
+        }
+        return rows;
+    }
+    if (body && typeof body === 'object') {
+        return [body];
+    }
+    return [];
+}
+
+// ═════════════════════════════════════════════════════════════════
+// UNIVERSAL DELETION & CASCADING PURGE ENDPOINTS
+// ═════════════════════════════════════════════════════════════════
+
+app.delete('/api/students/:id', async (req, res) => {
+    try {
+        const tenantId = req.user?.tenant_id || req.query.tenant_id || 'T_001';
+        const { id } = req.params;
+        await db.deleteStudent(tenantId, id);
+        await broadcastSystemState(tenantId);
+        res.json({ success: true, message: `Candidate ${id} deleted with cascading integrity.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/api/panels/:id', async (req, res) => {
+    try {
+        const tenantId = req.user?.tenant_id || req.query.tenant_id || 'T_001';
+        const { id } = req.params;
+        await db.deletePanel(tenantId, id);
+        await broadcastSystemState(tenantId);
+        res.json({ success: true, message: `Interview panel ${id} dissolved.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/api/interviews/:id', async (req, res) => {
+    try {
+        const tenantId = req.user?.tenant_id || req.query.tenant_id || 'T_001';
+        const { id } = req.params;
+        await db.deleteInterview(tenantId, id);
+        await broadcastSystemState(tenantId);
+        res.json({ success: true, message: `Interview slot ${id} deleted.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/api/queues/:id', async (req, res) => {
+    try {
+        const tenantId = req.user?.tenant_id || req.query.tenant_id || 'T_001';
+        const { id } = req.params;
+        await db.deleteQueue(tenantId, id);
+        await broadcastSystemState(tenantId);
+        res.json({ success: true, message: `Corporate queue candidate ${id} dequeued.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/api/academic-schedules/:id', async (req, res) => {
+    try {
+        const tenantId = req.user?.tenant_id || req.query.tenant_id || 'T_001';
+        const { id } = req.params;
+        await db.deleteAcademicSchedule(tenantId, id);
+        await broadcastSystemState(tenantId);
+        res.json({ success: true, message: `Academic schedule ${id} deleted.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/api/placement-relations/:id', async (req, res) => {
+    try {
+        const tenantId = req.user?.tenant_id || req.query.tenant_id || 'T_001';
+        const { id } = req.params;
+        await db.deletePlacementRelation(tenantId, id);
+        await broadcastSystemState(tenantId);
+        res.json({ success: true, message: `Placement relation ${id} severed.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ═════════════════════════════════════════════════════════════════
+// RECRUITMENT TOPOLOGY MESH & PLACEMENT RELATIONS ENDPOINTS
+// ═════════════════════════════════════════════════════════════════
+
+app.get('/api/placement-relations', async (req, res) => {
+    try {
+        const tenantId = req.user?.tenant_id || req.query.tenant_id || 'T_001';
+        const relations = await db.getPlacementRelations(tenantId);
+        res.json({ success: true, relations });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/placement-relations', async (req, res) => {
+    try {
+        const tenantId = req.user?.tenant_id || req.body.tenantId || 'T_001';
+        const { company, panelId, trackName, venueRoom, capacity, interviewerLead, status } = req.body;
+        if (!company || !panelId || !trackName) {
+            return res.status(400).json({ error: 'company, panelId, and trackName are required.' });
+        }
+        const created = await db.insertPlacementRelation(tenantId, {
+            company, panelId, trackName, venueRoom: venueRoom || 'Virtual Suite', capacity: capacity || 1, interviewerLead: interviewerLead || 'Lead Interviewer', status: status || 'ACTIVE'
+        });
+        await broadcastSystemState(tenantId);
+        res.status(201).json({ success: true, relation: created });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ═════════════════════════════════════════════════════════════════
+// ENTERPRISE BATCH INGESTION (UPLOADATION) ENDPOINTS
+// ═════════════════════════════════════════════════════════════════
+
+app.post('/api/students/upload', async (req, res) => {
+    try {
+        const tenantId = req.user?.tenant_id || req.body.tenantId || 'T_001';
+        const rows = parseUploadPayload(req.body);
+        if (rows.length === 0) return res.status(400).json({ error: 'No candidate records parsed from payload.' });
+        const result = await db.bulkUpsertStudents(tenantId, rows);
+        await broadcastSystemState(tenantId);
+        res.json({ success: true, count: result.count, message: `Successfully ingested ${result.count} candidates into roster.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/panels/upload', async (req, res) => {
+    try {
+        const tenantId = req.user?.tenant_id || req.body.tenantId || 'T_001';
+        const rows = parseUploadPayload(req.body);
+        if (rows.length === 0) return res.status(400).json({ error: 'No interview panel records parsed.' });
+        const result = await db.bulkInsertPanels(tenantId, rows);
+        await broadcastSystemState(tenantId);
+        res.json({ success: true, count: result.count, message: `Successfully provisioned ${result.count} interview panels.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/interviews/upload', async (req, res) => {
+    try {
+        const tenantId = req.user?.tenant_id || req.body.tenantId || 'T_001';
+        const rows = parseUploadPayload(req.body);
+        if (rows.length === 0) return res.status(400).json({ error: 'No interview records parsed.' });
+        const result = await db.bulkInsertInterviews(tenantId, rows);
+        await broadcastSystemState(tenantId);
+        res.json({ success: true, count: result.count, message: `Successfully scheduled ${result.count} interview slots.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/academic-schedules/upload', async (req, res) => {
+    try {
+        const tenantId = req.user?.tenant_id || req.body.tenantId || 'T_001';
+        const rows = parseUploadPayload(req.body);
+        if (rows.length === 0) return res.status(400).json({ error: 'No academic schedule records parsed.' });
+        const result = await db.bulkInsertAcademicSchedules(tenantId, rows);
+        await broadcastSystemState(tenantId);
+        res.json({ success: true, count: result.count, message: `Successfully mapped ${result.count} academic exam blocks.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/placement-relations/upload', async (req, res) => {
+    try {
+        const tenantId = req.user?.tenant_id || req.body.tenantId || 'T_001';
+        const rows = parseUploadPayload(req.body);
+        if (rows.length === 0) return res.status(400).json({ error: 'No placement relation records parsed.' });
+        const result = await db.bulkInsertPlacementRelations(tenantId, rows);
+        await broadcastSystemState(tenantId);
+        res.json({ success: true, count: result.count, message: `Successfully established ${result.count} placement mesh relations.` });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

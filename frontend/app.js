@@ -120,6 +120,7 @@ function addLocalLog(message) {
 // ================================================================================
 function renderUI() {
     if (!currentState.interviews) return;
+    if (typeof renderPlacementMesh === 'function') renderPlacementMesh();
 
     // 1. Render Interactive Timeline
     const timeline = document.getElementById("timeline-list");
@@ -148,8 +149,19 @@ function renderUI() {
         statusBadge.className = `slot-badge ${interview.delay_mins > 0 ? 'late' : ''}`;
         statusBadge.textContent = interview.delay_mins > 0 ? `+${interview.delay_mins}m Shifted` : interview.status;
 
+        const deleteSlotBtn = document.createElement("button");
+        deleteSlotBtn.className = "btn-delete-item";
+        deleteSlotBtn.innerHTML = "🗑️";
+        deleteSlotBtn.title = "Delete Interview Slot";
+        deleteSlotBtn.style.cssText = "background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 4px; padding: 4px 6px; cursor: pointer; margin-left: 8px; font-size: 0.8rem;";
+        deleteSlotBtn.onclick = (e) => {
+            e.stopPropagation();
+            deleteInterviewSlot(interview.id);
+        };
+
         slot.appendChild(slotInfo);
         slot.appendChild(statusBadge);
+        slot.appendChild(deleteSlotBtn);
         timeline.appendChild(slot);
     });
 
@@ -176,9 +188,19 @@ function renderUI() {
             <p>Priority Score: <strong style="color:var(--primary); font-size:1.05rem;">${student.priorityScore}</strong></p>
         `;
 
+        const deleteStuBtn = document.createElement("button");
+        deleteStuBtn.className = "btn btn-sm btn-danger-outline";
+        deleteStuBtn.style.cssText = "margin-top: 8px; padding: 4px 10px; font-size: 0.72rem; border-color: rgba(239, 68, 68, 0.4); color: #fca5a5; background: rgba(239, 68, 68, 0.1); border-radius: 4px; cursor: pointer;";
+        deleteStuBtn.innerHTML = "🗑️ Purge Candidate";
+        deleteStuBtn.onclick = (e) => {
+            e.stopPropagation();
+            deleteCandidate(student.studentId);
+        };
+
         card.appendChild(rank);
         card.appendChild(title);
         card.appendChild(stats);
+        card.appendChild(deleteStuBtn);
         queueContainer.appendChild(card);
     });
 
@@ -1699,6 +1721,377 @@ async function reclaimOfferCascade() {
         }
     } catch (e) {
         resultBox.innerHTML = `<p class="error-msg">Error executing offer cascade: ${e.message}</p>`;
+    }
+}
+
+/* ========================================================
+   ENTERPRISE UNIVERSAL DELETION CONTROLS
+   ======================================================== */
+
+async function deleteCandidate(studentId) {
+    if (!confirm(`Are you sure you want to purge candidate ${studentId} and cascade-remove all their queue registrations and scheduled slots?`)) return;
+    try {
+        const res = await fetch(`${API_BASE}/students/${studentId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${activeToken}` }
+        });
+        const data = await res.json();
+        addLocalLog(`🗑️ ${data.message || `Purged candidate ${studentId}`}`);
+        await fetchState();
+        await fetchAnalytics();
+    } catch (e) {
+        alert(`Failed to delete candidate: ${e.message}`);
+    }
+}
+
+async function deleteInterviewSlot(slotId) {
+    if (!confirm(`Remove scheduled interview slot #${slotId}?`)) return;
+    try {
+        const res = await fetch(`${API_BASE}/interviews/${slotId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${activeToken}` }
+        });
+        const data = await res.json();
+        addLocalLog(`🗑️ ${data.message || `Removed interview slot #${slotId}`}`);
+        await fetchState();
+        await fetchAnalytics();
+    } catch (e) {
+        alert(`Failed to delete interview slot: ${e.message}`);
+    }
+}
+
+async function deleteInterviewPanel(panelId) {
+    if (!confirm(`Dissolve interview panel ${panelId}? All assigned slots will be unassigned.`)) return;
+    try {
+        const res = await fetch(`${API_BASE}/panels/${panelId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${activeToken}` }
+        });
+        const data = await res.json();
+        addLocalLog(`🗑️ ${data.message || `Dissolved panel ${panelId}`}`);
+        await fetchState();
+        await fetchAnalytics();
+    } catch (e) {
+        alert(`Failed to delete panel: ${e.message}`);
+    }
+}
+
+/* ========================================================
+   RECRUITMENT TOPOLOGY MESH & PLACEMENT RELATIONS
+   ======================================================== */
+
+let cachedPlacementRelations = [];
+
+async function fetchPlacementMesh() {
+    try {
+        const res = await fetch(`${API_BASE}/placement-relations`, {
+            headers: { 'Authorization': `Bearer ${activeToken}` }
+        });
+        const data = await res.json();
+        if (data.relations) {
+            cachedPlacementRelations = data.relations;
+            renderPlacementMesh();
+            addLocalLog(`🌐 Synced ${data.relations.length} placement mesh topology nodes.`);
+        }
+    } catch (e) {
+        console.error("Failed to fetch placement mesh:", e);
+    }
+}
+
+function renderPlacementMesh() {
+    const grid = document.getElementById("placement-mesh-grid");
+    if (!grid) return;
+
+    const relations = (currentState.placementRelations && currentState.placementRelations.length > 0)
+        ? currentState.placementRelations
+        : (cachedPlacementRelations.length > 0 ? cachedPlacementRelations : [
+            { id: 1, company: 'Google', panel_id: 'PanelA', track_name: 'Distributed Systems & Cloud Core', venue_room: 'Boardroom Alpha (Wing A)', capacity: 2, interviewer_lead: 'Sundar R. (Staff Engineer)', status: 'ACTIVE' },
+            { id: 2, company: 'Microsoft', panel_id: 'PanelB', track_name: 'Systems Architecture & Windows Kernel', venue_room: 'Lab 402 (Engineering Wing)', capacity: 2, interviewer_lead: 'Satya N. (Principal Lead)', status: 'ACTIVE' },
+            { id: 3, company: 'Meta', panel_id: 'PanelC', track_name: 'Fullstack Architecture & AI Infrastructure', venue_room: 'Virtual Suite 1 (WebRTC)', capacity: 3, interviewer_lead: 'Mark Z. (Engineering Director)', status: 'ACTIVE' },
+            { id: 4, company: 'Goldman Sachs', panel_id: 'PanelD', track_name: 'Low-Latency C++ & Quant Analytics', venue_room: 'Conference Hall (Finance Wing)', capacity: 1, interviewer_lead: 'David S. (VP Tech)', status: 'ACTIVE' }
+        ]);
+
+    // Update metric counters
+    const elCorr = document.getElementById("mesh-stat-corridors");
+    const elTracks = document.getElementById("mesh-stat-tracks");
+    const elRooms = document.getElementById("mesh-stat-rooms");
+    const elLoad = document.getElementById("mesh-stat-load");
+
+    if (elCorr) elCorr.textContent = `${relations.length} Active`;
+    if (elTracks) {
+        const uniqueTracks = new Set(relations.map(r => r.track_name));
+        elTracks.textContent = `${uniqueTracks.size} Tracks`;
+    }
+    if (elRooms) {
+        const uniqueRooms = new Set(relations.map(r => r.venue_room));
+        elRooms.textContent = `${uniqueRooms.size} Venues`;
+    }
+    if (elLoad) {
+        const totalCap = relations.reduce((sum, r) => sum + (Number(r.capacity) || 1), 0);
+        elLoad.textContent = `${totalCap} Slots`;
+    }
+
+    grid.innerHTML = relations.map(r => {
+        const companyColors = {
+            'Google': '#ea4335',
+            'Microsoft': '#00a4ef',
+            'Meta': '#0668e1',
+            'Goldman Sachs': '#f59e0b',
+            'Amazon': '#ff9900',
+            'Apple': '#a2aaad'
+        };
+        const color = companyColors[r.company] || '#818cf8';
+
+        return `
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-left: 4px solid ${color}; border-radius: 10px; padding: 14px; position: relative;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                    <div>
+                        <span style="font-weight: 800; font-size: 1rem; color: #f8fafc;">${r.company}</span>
+                        <span style="margin-left: 8px; font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: rgba(99,102,241,0.2); color: #a5b4fc; font-family: monospace;">${r.panel_id}</span>
+                    </div>
+                    <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 600;">${r.status || 'ACTIVE'}</span>
+                </div>
+                <div style="font-size: 0.85rem; font-weight: 600; color: #38bdf8; margin-bottom: 6px;">
+                    🧭 ${r.track_name}
+                </div>
+                <div style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">
+                    🏛️ <strong>Venue:</strong> ${r.venue_room} &nbsp;·&nbsp; ⚡ <strong>Cap:</strong> ${r.capacity || 1} slots
+                </div>
+                <div style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 12px;">
+                    🧑‍💻 <strong>Lead:</strong> ${r.interviewer_lead || 'Staff Interviewer'}
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 8px;">
+                    <span style="font-size: 0.72rem; color: #64748b;">Node ID: #${r.id}</span>
+                    <button class="btn btn-sm btn-danger-outline" style="padding: 3px 8px; font-size: 0.72rem; border-color: rgba(239,68,68,0.3); color: #fca5a5;" onclick="severPlacementRelation(${r.id})">
+                        Sever Corridor ✕
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function toggleAssignCorridorModal() {
+    const box = document.getElementById("assign-corridor-box");
+    if (!box) return;
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+}
+
+async function submitAssignCorridor() {
+    const company = document.getElementById("mesh-input-company")?.value.trim() || 'Amazon';
+    const panelId = document.getElementById("mesh-input-panel")?.value || 'PanelA';
+    const trackName = document.getElementById("mesh-input-track")?.value.trim() || 'Cloud Core';
+    const venueRoom = document.getElementById("mesh-input-room")?.value.trim() || 'Lab 301';
+    const capacity = parseInt(document.getElementById("mesh-input-cap")?.value) || 2;
+    const interviewerLead = document.getElementById("mesh-input-lead")?.value.trim() || 'Staff Lead';
+
+    try {
+        const res = await fetch(`${API_BASE}/placement-relations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeToken}` },
+            body: JSON.stringify({ company, panelId, trackName, venueRoom, capacity, interviewerLead })
+        });
+        const data = await res.json();
+        if (data.success) {
+            addLocalLog(`🌐 Provisioned new placement mesh corridor for ${company} (${trackName}).`);
+            toggleAssignCorridorModal();
+            await fetchPlacementMesh();
+            await fetchState();
+        }
+    } catch (e) {
+        alert(`Failed to deploy mesh corridor: ${e.message}`);
+    }
+}
+
+async function severPlacementRelation(id) {
+    if (!confirm(`Are you sure you want to sever placement corridor #${id}?`)) return;
+    try {
+        const res = await fetch(`${API_BASE}/placement-relations/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${activeToken}` }
+        });
+        const data = await res.json();
+        addLocalLog(`✂️ Severed corridor #${id}.`);
+        await fetchPlacementMesh();
+        await fetchState();
+    } catch (e) {
+        alert(`Failed to sever corridor: ${e.message}`);
+    }
+}
+
+/* ========================================================
+   ENTERPRISE BULK INGESTION STUDIO HANDLERS
+   ======================================================== */
+
+let currentIngestEntity = 'students';
+
+const INGEST_TEMPLATES = {
+    students: {
+        csv: `id,name,email,cgpa,department,status\nSTU_006,Meera Nambiar,meera@uni.edu,9.3,Computer Science,ACTIVE\nSTU_007,Rohan Varma,rohan@uni.edu,8.9,Information Science,ACTIVE\nSTU_008,Tanya Sen,tanya@uni.edu,9.1,Electronics & Comm,ACTIVE`,
+        json: JSON.stringify([
+            { id: "STU_006", name: "Meera Nambiar", email: "meera@uni.edu", cgpa: 9.3, department: "Computer Science", status: "ACTIVE" },
+            { id: "STU_007", name: "Rohan Varma", email: "rohan@uni.edu", cgpa: 8.9, department: "Information Science", status: "ACTIVE" },
+            { id: "STU_008", name: "Tanya Sen", email: "tanya@uni.edu", cgpa: 9.1, department: "Electronics & Comm", status: "ACTIVE" }
+        ], null, 2)
+    },
+    panels: {
+        csv: `id,name,company,interviewer_name,virtual_room_url,status\nPanelE,Amazon AWS Panel,Amazon,Andy J. (VP Cloud),https://chime.aws/panel-e,IDLE\nPanelF,Apple Silicon Panel,Apple,Craig F. (VP Software),https://meet.apple.com/panel-f,IDLE`,
+        json: JSON.stringify([
+            { id: "PanelE", name: "Amazon AWS Panel", company: "Amazon", interviewer_name: "Andy J. (VP Cloud)", virtual_room_url: "https://chime.aws/panel-e", status: "IDLE" },
+            { id: "PanelF", name: "Apple Silicon Panel", company: "Apple", interviewer_name: "Craig F. (VP Software)", virtual_room_url: "https://meet.apple.com/panel-f", status: "IDLE" }
+        ], null, 2)
+    },
+    interviews: {
+        csv: `panel_id,student_id,round_name,scheduled_start,scheduled_end,status\nPanelA,STU_004,Advanced Algorithms,2026-09-17T05:00:00.000Z,2026-09-17T05:45:00.000Z,Pending\nPanelB,STU_005,Distributed Hash Tables,2026-09-17T05:30:00.000Z,2026-09-17T06:15:00.000Z,Pending`,
+        json: JSON.stringify([
+            { panel_id: "PanelA", student_id: "STU_004", round_name: "Advanced Algorithms", scheduled_start: "2026-09-17T05:00:00.000Z", scheduled_end: "2026-09-17T05:45:00.000Z", status: "Pending" },
+            { panel_id: "PanelB", student_id: "STU_005", round_name: "Distributed Hash Tables", scheduled_start: "2026-09-17T05:30:00.000Z", scheduled_end: "2026-09-17T06:15:00.000Z", status: "Pending" }
+        ], null, 2)
+    },
+    academic: {
+        csv: `student_id,event_name,start_time,end_time\nSTU_003,Embedded Systems Lab,2026-09-17T07:00:00.000Z,2026-09-17T09:00:00.000Z\nSTU_004,Distributed Systems Midterm,2026-09-17T09:00:00.000Z,2026-09-17T11:00:00.000Z`,
+        json: JSON.stringify([
+            { student_id: "STU_003", event_name: "Embedded Systems Lab", start_time: "2026-09-17T07:00:00.000Z", end_time: "2026-09-17T09:00:00.000Z" },
+            { student_id: "STU_004", event_name: "Distributed Systems Midterm", start_time: "2026-09-17T09:00:00.000Z", end_time: "2026-09-17T11:00:00.000Z" }
+        ], null, 2)
+    },
+    relations: {
+        csv: `company,panel_id,track_name,venue_room,capacity,interviewer_lead,status\nUber,PanelA,High-Throughput Dispatch,Virtual Room 9,2,Dara K. (Chief Exec),ACTIVE\nNetflix,PanelC,Distributed Streaming Engine,Boardroom Gamma,3,Greg P. (Staff Eng),ACTIVE`,
+        json: JSON.stringify([
+            { company: "Uber", panel_id: "PanelA", track_name: "High-Throughput Dispatch", venue_room: "Virtual Room 9", capacity: 2, interviewer_lead: "Dara K. (Chief Exec)", status: "ACTIVE" },
+            { company: "Netflix", panel_id: "PanelC", track_name: "Distributed Streaming Engine", venue_room: "Boardroom Gamma", capacity: 3, interviewer_lead: "Greg P. (Staff Eng)", status: "ACTIVE" }
+        ], null, 2)
+    }
+};
+
+function selectIngestEntity(entity) {
+    currentIngestEntity = entity;
+    ['students', 'panels', 'interviews', 'academic', 'relations'].forEach(e => {
+        const btn = document.getElementById(`btn-ingest-${e}`);
+        if (btn) {
+            if (e === entity) {
+                btn.classList.add('btn-primary');
+                btn.classList.remove('btn-outline');
+            } else {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline');
+            }
+        }
+    });
+    loadIngestTemplate('csv');
+}
+
+function loadIngestTemplate(format) {
+    const buffer = document.getElementById("bulk-ingest-buffer");
+    if (!buffer) return;
+    const template = INGEST_TEMPLATES[currentIngestEntity]?.[format] || '';
+    buffer.value = template;
+    detectIngestBufferRows();
+}
+
+function clearIngestBuffer() {
+    const buffer = document.getElementById("bulk-ingest-buffer");
+    if (buffer) buffer.value = '';
+    detectIngestBufferRows();
+    const resBox = document.getElementById("bulk-ingest-result");
+    if (resBox) resBox.style.display = 'none';
+}
+
+function detectIngestBufferRows() {
+    const buffer = document.getElementById("bulk-ingest-buffer")?.value.trim() || '';
+    const badge = document.getElementById("ingest-detected-rows");
+    if (!badge) return;
+
+    if (!buffer) {
+        badge.textContent = 'Payload: 0 Records Detected';
+        return;
+    }
+
+    try {
+        if (buffer.startsWith('[') || buffer.startsWith('{')) {
+            const parsed = JSON.parse(buffer);
+            const count = Array.isArray(parsed) ? parsed.length : 1;
+            badge.textContent = `Payload: ${count} JSON Records`;
+            return;
+        }
+    } catch (e) {
+        // Not JSON, check CSV
+    }
+
+    const lines = buffer.split('\n').filter(l => l.trim().length > 0);
+    const count = Math.max(0, lines.length - 1);
+    badge.textContent = `Payload: ${count} CSV Rows`;
+}
+
+async function executeBulkIngest() {
+    const buffer = document.getElementById("bulk-ingest-buffer")?.value.trim() || '';
+    const resBox = document.getElementById("bulk-ingest-result");
+    const execBtn = document.getElementById("btn-execute-bulk-ingest");
+
+    if (!buffer) {
+        alert("Please load or paste ingestion payload.");
+        return;
+    }
+
+    resBox.style.display = 'block';
+    resBox.innerHTML = '<p class="status-msg">⚡ Validating schema and committing atomic batch ingestion...</p>';
+    if (execBtn) execBtn.classList.add('btn-loading');
+
+    const entityEndpoints = {
+        students: `${API_BASE}/students/upload`,
+        panels: `${API_BASE}/panels/upload`,
+        interviews: `${API_BASE}/interviews/upload`,
+        academic: `${API_BASE}/academic-schedules/upload`,
+        relations: `${API_BASE}/placement-relations/upload`
+    };
+
+    const targetUrl = entityEndpoints[currentIngestEntity];
+
+    try {
+        let payload;
+        let isJson = false;
+        try {
+            if (buffer.startsWith('[') || buffer.startsWith('{')) {
+                payload = JSON.parse(buffer);
+                isJson = true;
+            }
+        } catch (e) {}
+
+        if (!isJson) {
+            payload = { csv: buffer };
+        }
+
+        const res = await fetch(targetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeToken}` },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (execBtn) execBtn.classList.remove('btn-loading');
+
+        if (res.ok && data.success) {
+            resBox.innerHTML = `
+                <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 8px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <h4 style="color: #34d399; margin: 0;">✅ Atomic Bulk Ingestion Complete</h4>
+                        <span style="font-family: monospace; background: rgba(16, 185, 129, 0.2); color: #a7f3d0; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">${data.count} Records Ingested</span>
+                    </div>
+                    <p style="font-size: 0.82rem; color: #cbd5e1; margin: 0;">${data.message}</p>
+                </div>
+            `;
+            addLocalLog(`📥 Bulk Ingestion: ${data.message}`);
+            await fetchState();
+            await fetchAnalytics();
+            if (currentIngestEntity === 'relations') {
+                await fetchPlacementMesh();
+            }
+        } else {
+            resBox.innerHTML = `<p class="error-msg">Ingestion failed: ${data.error || 'Schema validation error'}</p>`;
+        }
+    } catch (e) {
+        if (execBtn) execBtn.classList.remove('btn-loading');
+        resBox.innerHTML = `<p class="error-msg">Error executing bulk upload: ${e.message}</p>`;
     }
 }
 
