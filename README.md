@@ -1,5 +1,7 @@
 # 🎓 Placement Drive Clash Resolver (Enterprise Edition v2.0)
 
+**🚀 Live Demo:** [https://placement-clash-resolver.shashankj.tech](https://placement-clash-resolver.shashankj.tech)
+
 [![Automated Tests](https://img.shields.io/badge/Tests-32%2F32%20Passing-brightgreen?style=for-the-badge&logo=jest)](tests/)
 [![Suites](https://img.shields.io/badge/Suites-19%20Passed-blue?style=for-the-badge&logo=node.js)](tests/)
 [![Architecture](https://img.shields.io/badge/Architecture-Autonomous%20Bipartite%20Engine-orange?style=for-the-badge)](backend/)
