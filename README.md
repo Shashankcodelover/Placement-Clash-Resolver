@@ -66,3 +66,13 @@ Visit the dashboard at `http://localhost:3000`.
 ## 📸 Visual Showcase
 
 For high-resolution screenshots and architecture breakdowns of all 4 operational personas and AI modules, see [Showcase Documentation](docs/showcase/README.md).
+
+
+## User Flow Verification
+
+![User Flow](docs/placement_clash_kuhn_verified.png)
+![User Flow](docs/placement_home_verified.png)
+![User Flow](docs/placement_intel_verified.png)
+![User Flow](docs/placement_mesh_verified.png)
+![User Flow](docs/placement_readiness_verified.png)
+
