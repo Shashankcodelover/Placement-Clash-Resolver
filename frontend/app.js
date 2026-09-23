@@ -817,7 +817,7 @@ async function provisionVirtualStudio() {
 
         resultBox.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h4 style="color:#8b5cf6; margin:0;">Virtual Room: ${r.roomId}</h4>
+                <h4 style="color:#3b82f6; margin:0;">Virtual Room: ${r.roomId}</h4>
                 <span class="badge-value" style="color:#10b981;">E2EE ACTIVE</span>
             </div>
             <p style="font-size:0.85rem; color:#94a3b8; margin:6px 0;">Encryption: <strong>${r.encryptionProtocol}</strong></p>
@@ -888,7 +888,7 @@ async function runGaleShapleySimulation() {
                     </div>
                     <div style="background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); text-align:center;">
                         <span style="font-size:0.7rem; color:#94a3b8;">Convergence Step</span>
-                        <h4 style="color:#a855f7; margin:4px 0 0 0; font-size:1.1rem;">Round #3</h4>
+                        <h4 style="color:#3b82f6; margin:4px 0 0 0; font-size:1.1rem;">Round #3</h4>
                     </div>
                 </div>
 
@@ -939,7 +939,7 @@ async function computeParetoFrontier() {
                 </div>
                 <div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; border:1px solid rgba(168,85,247,0.2);">
                     <span style="font-size:0.72rem; color:#94a3b8;">Objective 3: Fatigue Variance (σ²)</span>
-                    <h3 style="color:#a855f7; margin:6px 0 2px 0; font-size:1.3rem;">0.84</h3>
+                    <h3 style="color:#3b82f6; margin:6px 0 2px 0; font-size:1.3rem;">0.84</h3>
                     <p style="font-size:0.7rem; color:#e9d5ff; margin:0;">Equitable panelist workload</p>
                 </div>
             </div>
@@ -1086,11 +1086,11 @@ async function generateBlindDossier() {
         <div style="background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.95)); border:1px solid rgba(168,85,247,0.3); border-radius:16px; padding:18px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px; margin-bottom:14px;">
                 <div>
-                    <h3 style="color:#a855f7; margin:0; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
+                    <h3 style="color:#3b82f6; margin:0; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
                         🕶️ Zero-Knowledge Blind Screening Passport
-                        <span style="background:rgba(168,85,247,0.2); color:#c084fc; border:1px solid #a855f7; font-size:0.7rem; padding:2px 8px; border-radius:999px;">100% PII STRIPPED</span>
+                        <span style="background:rgba(168,85,247,0.2); color:#60a5fa; border:1px solid #3b82f6; font-size:0.7rem; padding:2px 8px; border-radius:999px;">100% PII STRIPPED</span>
                     </h3>
-                    <p style="font-size:0.75rem; color:#94a3b8; margin:4px 0 0 0;">Anonymized HMAC Token: <code style="color:#c084fc;">anon_cand_4a9f8e21bc08</code></p>
+                    <p style="font-size:0.75rem; color:#94a3b8; margin:4px 0 0 0;">Anonymized HMAC Token: <code style="color:#60a5fa;">anon_cand_4a9f8e21bc08</code></p>
                 </div>
                 <span class="badge-value" style="color:#10b981; font-size:0.85rem; padding:4px 10px;">ZERO BIAS VERIFIED</span>
             </div>
@@ -1455,7 +1455,7 @@ async function solveKuhnMunkres() {
                     </div>
                     <div style="background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; text-align:center;">
                         <div style="color:#94a3b8; font-size:0.7rem;">Augmenting Paths</div>
-                        <div style="color:#c084fc; font-size:1.1rem; font-weight:bold;">0 Residual</div>
+                        <div style="color:#60a5fa; font-size:1.1rem; font-weight:bold;">0 Residual</div>
                     </div>
                 </div>
                 <div style="font-size:0.75rem; color:#94a3b8; margin-top:8px; word-break:break-all;">

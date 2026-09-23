@@ -10,7 +10,7 @@
     --primary-glow: rgba(99, 102, 241, 0.25);
     
     --secondary: #06b6d4;
-    --accent: #8b5cf6;
+    --accent: #3b82f6;
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #f43f5e;
@@ -879,7 +879,7 @@ body {
 
 .skill-tag-bonus {
     background: rgba(139, 92, 246, 0.2);
-    border: 1px solid #8b5cf6;
+    border: 1px solid #3b82f6;
     color: #c4b5fd;
 }
 
@@ -911,7 +911,7 @@ body {
     align-items: center;
     gap: 10px;
     padding: 12px 20px;
-    background: linear-gradient(135deg, #0284c7, #6366f1, #9333ea);
+    background: linear-gradient(135deg, #0284c7, #6366f1, #2563eb);
     border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 999px;
     color: white;
