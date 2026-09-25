@@ -6,3 +6,7 @@ Check out the live demo and the source code below. Let me know your thoughts!
 
 # GitHub: https://github.com/Shashankcodelover/Placement-Clash-Resolver
 # Live Demo: https://placement-clash-resolver.shashankj.tech/
+
+
+?? Live URL: https://pcr.shashankj.tech
+?? GitHub: https://github.com/Shashankcodelover/Placement-Clash-Resolver
