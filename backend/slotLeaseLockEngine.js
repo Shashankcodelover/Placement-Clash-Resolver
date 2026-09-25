@@ -100,6 +100,13 @@ class SlotLeaseLockEngine {
             confirmedAt: new Date().toISOString(),
         };
     }
+
+    acquireLease(slotId, candidateId, durationSeconds = 300) {
+        if (!this.slots.has(slotId)) {
+            this.initSlot(slotId, 'Campus General Drive', new Date().toISOString());
+        }
+        return this.acquireSlotLease(slotId, candidateId, durationSeconds * 1000);
+    }
 }
 
 const slotLeaseLockEngine = new SlotLeaseLockEngine();

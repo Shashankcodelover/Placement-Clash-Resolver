@@ -108,6 +108,18 @@ class VirtualRoomGateway {
     getSession(roomId) {
         return this.activeSessions.get(roomId);
     }
+
+    createVirtualRoom(panelId = 'PanelA', company = 'Google', candidateName = 'STU_001') {
+        const room = this.createSecureInterviewRoom(panelId, company, candidateName, 'INTERVIEWER_LEAD', 60);
+        const session = this.activeSessions.get(room.roomId);
+        return {
+            roomId: room.roomId,
+            interviewerToken: session ? session.participantNonce : crypto.randomBytes(12).toString('hex'),
+            candidateUrl: room.joinUrlCandidate,
+            interviewerUrl: room.joinUrlInterviewer,
+            encryptionProtocol: room.encryptionProtocol
+        };
+    }
 }
 
 const virtualRoomGateway = new VirtualRoomGateway();

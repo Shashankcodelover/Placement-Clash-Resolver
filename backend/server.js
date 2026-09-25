@@ -378,8 +378,21 @@ const tenantBenchmarkGovernor = require('./tenantBenchmark');
 // --- IR-11 REST ENDPOINTS ---
 app.post('/api/v2/ir11/matching/gale-shapley', authMiddleware(['ADMIN', 'RECRUITER']), (req, res) => {
     try {
-        const { companies, students } = req.body;
-        if (!companies || !students) return res.status(400).json({ error: 'Companies and students maps required' });
+        let { companies, students } = req.body;
+        if (!companies || !students) {
+            companies = {
+                'Google': { capacity: 2, preferences: ['Preetham J', 'Rahul Sharma', 'Ananya Iyer', 'Vikram Patel'] },
+                'Microsoft': { capacity: 2, preferences: ['Rahul Sharma', 'Preetham J', 'Kavya Nair', 'Ananya Iyer'] },
+                'Amazon': { capacity: 1, preferences: ['Ananya Iyer', 'Vikram Patel', 'Rahul Sharma', 'Preetham J'] }
+            };
+            students = {
+                'Preetham J': { preferences: ['Google', 'Microsoft', 'Amazon'], minCgpa: 8.5 },
+                'Rahul Sharma': { preferences: ['Microsoft', 'Google', 'Amazon'], minCgpa: 8.0 },
+                'Ananya Iyer': { preferences: ['Google', 'Amazon', 'Microsoft'], minCgpa: 9.0 },
+                'Vikram Patel': { preferences: ['Amazon', 'Microsoft', 'Google'], minCgpa: 7.5 },
+                'Kavya Nair': { preferences: ['Microsoft', 'Google', 'Amazon'], minCgpa: 8.2 }
+            };
+        }
         const result = galeShapleyEngine.solveStableMatching(companies, students);
         res.json({ success: true, result });
     } catch (e) {
