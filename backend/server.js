@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -17,8 +19,17 @@ const kuhnMunkresMatcher = require('./kuhnMunkresMatcher');
 const multiCompanyClashArbitrator = require('./multiCompanyClashArbitrator');
 
 const app = express();
+app.use(helmet({ contentSecurityPolicy: false })); // Allow external assets for UI
 app.use(cors());
 app.use(express.json());
+
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+app.use('/api/', apiLimiter);
+
 const frontendDir = path.join(__dirname, '../frontend');
 app.use(express.static(frontendDir));
 
@@ -1038,7 +1049,7 @@ app.get('*', (req, res, next) => {
     res.sendFile(path.join(frontendDir, 'index.html'));
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3005;
 if (require.main === module) {
     server.listen(PORT, () => {
         console.log(`🚀 Placement Drive Clash Resolver (Enterprise Edition v3.0) running on http://localhost:${PORT}`);
